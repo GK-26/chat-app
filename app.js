@@ -1,34 +1,36 @@
 const express = require('express');
-const {Server} = require("socket.io")
 const http = require('http');
 const path = require('path');
-const { Socket } = require('dgram');
-
-
+const socketIO = require('socket.io'); 
+const mongoose = require('mongoose');
+require('dotenv').config();
+const Chat = require('./models/chat.model');
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+let io = socketIO(server);
+
+// mongoose.connect(process.env.MONGOURI).then(()=>{
+//   console.log(`#### DB CONNECTED`)
+// })
 
 
 app.get('/', (req, res)=>{
+  
+io.on('connection', socket =>{
+  console.log('a user connected', socket.id)
+  socket.on('disconnect', ()=>{
+    console.log('user disconnected')
+  })
+  socket.on('chat message', (msg, room) =>{
+    if (room === ""){
+      socket.broadcast.emit('chat message', msg);
+    } else {
+      socket.to(room).emit('chat message', msg)
+    }
+  })
+})
     return res.sendFile(path.join(__dirname, 'index.html'))
 })
-
-io.on('connection', (socket) =>{
-    console.log('a user connected');
-    socket.on('disconnect', ()=>{
-        console.log('user disconnected')    
-    })
-})
-
-io.on('connection', (socket) => {
-    socket.on('chat message', (msg) => {
-      console.log('message: ' + msg);
-      io.emit('chat message', msg)
-    });
-  });
-
-
 
 
 server.listen(3000, ()=>{
